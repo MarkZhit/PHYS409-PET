@@ -1,3 +1,0 @@
-pandas~=1.5.3
-numpy~=1.23.5
-scikit-image~=0.24.0
