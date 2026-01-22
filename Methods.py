@@ -89,7 +89,7 @@ def display_FWHM(grouped_fwhm):
 
 
 
-def normalize(grouped_data):
+def normalizeWidthScans(grouped_data):
     for width in grouped_data:
         data_list = grouped_data[width]
         normalized_counts_list = []
@@ -141,6 +141,39 @@ def get_fwhm(x, y):
         return fwhm, roots[0], roots[-1]
     return None, None, None
 
+
+def getFWHMGaussian(normed_group_data):
+    grouped_fwhm = {}
+
+    for width in normed_group_data:
+        data_list = normed_group_data[width]
+        normalized_list = []
+
+        for dist, counts, ucounts in data_list:
+            fwhm, ufwhm = get_fwhm_Gauss(dist, counts, ucounts)
+            normalized_list.append((fwhm, ufwhm))
+
+        # Keep it as a list of tuples
+        grouped_fwhm[width] = normalized_list
+
+    return grouped_fwhm
+
+def get_fwhm_Gauss(x, y, yerr):
+    p0 = [np.max(x), y[np.argmax(y)], 1.0, np.min(y)]
+
+    # 4. Perform the weighted fit
+    popt, pcov = curve_fit(gaussian_1d, x, y, p0=p0, sigma=yerr)
+    amp_f, mean_f, sigma_f, offset_f = popt
+
+    # 5. Calculate parameter errors
+    perr = np.sqrt(np.diag(pcov))
+    uamp_f, umean_f, usigma_f, uoffset_f = perr
+
+    fwhm = 2.35 * sigma_f
+    ufwhm = 2.35 * usigma_f
+
+    return fwhm, ufwhm
+
 def count_uncertainty(count_arr):
     count_arr_uncertainty = []
     N = sum(count_arr)
@@ -184,6 +217,7 @@ def readLineScan(pathname):
 def readSinogram(directory):
     angle_pattern = re.compile(r"(-?\d+_\d+)\s*Deg")
     angle_to_counts = {}
+    angle_to_ucounts = {}
     distances_ref = []
     for fname in os.listdir(directory):
         if not fname.endswith(".dat"):
@@ -211,16 +245,18 @@ def readSinogram(directory):
         # print(distances_ref)
 
         angle_to_counts[angle] = data["Counts"].to_numpy()
+        angle_to_ucounts[angle] = count_uncertainty(data["Counts"].to_numpy())
 
     angles = np.array(sorted(angle_to_counts.keys()))
     # print(angles)
     # Build 2D array: rows = distance, cols = angle
     counts_2d = np.column_stack([angle_to_counts[a] for a in angles])
+    ucounts_2d = np.column_stack([angle_to_ucounts[a] for a in angles])
 
     midpoint = (distances_ref[-1] - distances_ref[0]) / 2
     distances_ref = distances_ref - midpoint
     # print(distances_ref)
-    return counts_2d, distances_ref, angles
+    return counts_2d, ucounts_2d, distances_ref, angles
 
 
 def display_raw_sinogram(count, distance, angle, savename):
@@ -256,3 +292,21 @@ def display_reconstructed_image(recon, distance, savename):
     plt.savefig(savename)
     plt.show()
     return
+
+def gaussian_2d(coords, amplitude, x0, y0, sigma_x, sigma_y, offset):
+    x, y = coords
+    # The exponent for a 2D Gaussian
+    inner = ((x - x0)**2 / (2 * sigma_x**2)) + ((y - y0)**2 / (2 * sigma_y**2))
+    return amplitude * np.exp(-inner) + offset
+
+def double_gaussian_2d(coords, a1, x1, y1, sx1, sy1, a2, x2, y2, sx2, sy2, offset):
+    # Sum of two independent 2D Gaussians
+    return (gaussian_2d(coords, a1, x1, y1, sx1, sy1, 0) +
+            gaussian_2d(coords, a2, x2, y2, sx2, sy2, 0) + offset)
+
+
+def gaussian_1d(coords, amplitude, x0, sigma_x, offset):
+    x = coords
+    # The exponent for a 2D Gaussian
+    inner = ((x - x0)**2 / (2 * sigma_x**2))
+    return amplitude * np.exp(-inner) + offset
