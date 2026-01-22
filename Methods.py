@@ -75,7 +75,7 @@ def plotWidthScans(grouped_data, savename):
             # plt.plot(dist, counts, label=f"counts for width = {metric}mm")
 
     plt.legend()
-    plt.savefig(savename)
+    plt.savefig("figures/" + savename)
     plt.show()
 
 def display_FWHM(grouped_fwhm):
@@ -193,7 +193,7 @@ def plotLineScan(dist, counts, ucounts, savename):
     plt.errorbar(dist, counts, fmt='-o', yerr = ucounts)
     # plt.plot(dist, counts, label=f"counts for width = {metric}mm")
 
-    plt.savefig(savename)
+    plt.savefig("figures/" + savename)
     plt.show()
 
 def readLineScan(pathname):
@@ -274,7 +274,7 @@ def display_raw_sinogram(count, distance, angle, savename):
     plt.xlabel("Angle (deg)")
     plt.ylabel("Distance (mm)")
     plt.colorbar(label="Counts")
-    plt.savefig(savename)
+    plt.savefig("figures/" + savename)
     plt.show()
     return
 
@@ -289,7 +289,7 @@ def display_reconstructed_image(recon, distance, savename):
     plt.title("Backprojection reconstruction")
     plt.ylabel("Distance (mm)")
     plt.xlabel("Distance (mm)")
-    plt.savefig(savename)
+    plt.savefig("figures/" + savename)
     plt.show()
     return
 
