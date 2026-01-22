@@ -59,6 +59,45 @@ def count_uncertainty(count_arr):
         count_arr_uncertainty.append(uncertainty)
     return count_arr_uncertainty
 
+# def plotWidthScansGaussian(grouped_data, savename):
+#     plt.figure()
+#     plt.title("Sweeped Counts for Different Widths")
+#     plt.xlabel("Displacement (mm)")
+#     plt.ylabel("Counts")
+#
+#     for metric in sorted(grouped_data.keys()):
+#         data_list = grouped_data[metric]
+#
+#         # data_list is a list of tuples: (distance_array, counts_array)
+#         for dist, counts, ucounts in data_list:
+#             plt.errorbar(dist, counts, fmt='-o', yerr = ucounts, label=f"counts for width = {metric}mm")
+#             # plt.plot(dist, counts, label=f"counts for width = {metric}mm")
+#
+#     plt.legend()
+#     plt.savefig("figures/" + savename)
+#     plt.show()
+
+def plotWidthScanGaussian(dist, counts, ucounts, width, popt, pcov, savename):
+    dist_fit = np.linspace(dist[0], dist[-1], 100)
+    fitted_curve = gaussian_1d(dist_fit, *popt)
+    amp_f, mean_f, sigma_f, offset_f = popt
+    # print(pcov)
+    uamp_f = pcov[0][0]
+    umean_f = pcov[1][1]
+    usigma_f = pcov[2][2]
+    uoffset_f = pcov[3][3]
+
+    plt.figure()
+    plt.title(f"Sweeped Counts for W={width}mm")
+    plt.xlabel("Displacement (mm)")
+    plt.ylabel("Counts")
+    plt.errorbar(dist, counts, fmt='o', yerr=ucounts, label=f"counts data")
+    plt.plot(dist_fit, fitted_curve, label=f"Gaussian fit, mu={mean_f:.2f}+/-{np.sqrt(umean_f):.2f}\nsigma={sigma_f:.2f}+/-{np.sqrt(usigma_f):.2f}")
+    plt.legend(loc="upper right")
+    plt.savefig("figures/" + savename)
+    plt.show()
+
+
 
 def plotWidthScans(grouped_data, savename):
     plt.figure()
@@ -169,8 +208,8 @@ def get_fwhm_Gauss(x, y, yerr):
     perr = np.sqrt(np.diag(pcov))
     uamp_f, umean_f, usigma_f, uoffset_f = perr
 
-    fwhm = 2.35 * sigma_f
-    ufwhm = 2.35 * usigma_f
+    fwhm = 2.35 * sigma_f # got this factor online
+    ufwhm = 2.35 * usigma_f # 2.35 is a perfectly certain number
 
     return fwhm, ufwhm
 
