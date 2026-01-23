@@ -279,7 +279,7 @@ def readSinogram(directory):
         # if distances_ref is None:
         if (np.size(distances_ref) == 0):
             distances_ref = data["Distance"].to_numpy()
-        elif (not (distances_ref == data["Distance"].to_numpy()).all()):
+        elif not np.array_equal(distances_ref, data["Distance"].to_numpy()):
             raise ValueError("Distance grid mismatch in file: " + fname)
         # print(distances_ref)
 
