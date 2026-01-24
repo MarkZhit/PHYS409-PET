@@ -198,18 +198,20 @@ def getFWHMGaussian(normed_group_data):
     return grouped_fwhm
 
 def get_fwhm_Gauss(x, y, yerr):
-    p0 = [np.max(x), y[np.argmax(y)], 1.0, np.min(y)]
+    # p0 = [np.max(x), y[np.argmax(y)], 1.0, np.min(y)]
+
+    p0 = [np.max(y), x[np.argmax(y)], 1.0, np.min(y)]
 
     # 4. Perform the weighted fit
-    popt, pcov = curve_fit(gaussian_1d, x, y, p0=p0, sigma=yerr)
+    popt, pcov = curve_fit(gaussian_1d, x, y, p0=p0) # not using , sigma=yerr
     amp_f, mean_f, sigma_f, offset_f = popt
 
     # 5. Calculate parameter errors
     perr = np.sqrt(np.diag(pcov))
     uamp_f, umean_f, usigma_f, uoffset_f = perr
 
-    fwhm = 2.35 * sigma_f # got this factor online
-    ufwhm = 2.35 * usigma_f # 2.35 is a perfectly certain number
+    fwhm = 2.35 * abs(sigma_f) # got this factor online
+    ufwhm = 2.35 * abs(usigma_f) # 2.35 is a perfectly certain number
 
     return fwhm, ufwhm
 
