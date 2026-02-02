@@ -351,3 +351,59 @@ def gaussian_1d(coords, amplitude, x0, sigma_x, offset):
     # The exponent for a 2D Gaussian
     inner = ((x - x0)**2 / (2 * sigma_x**2))
     return amplitude * np.exp(-inner) + offset
+
+
+
+def singleSlit(coords, amplitude, x0, W, L):
+    x = coords
+    return np.maximum(amplitude * np.arctan((W/2 - np.abs(x-x0))/L), 0)
+
+def circleConvolve(R,x,x0):
+    return np.maximum(0,2*np.sqrt(R**2-(x-x0)**2))
+
+def sphereConvolve(R,x,x0):
+    return np.maximum(0,np.pi*(R**2-(x-x0)**2))
+
+def doubleSlitModelConvoluted(xArr, Wslit, Rscint, Rsource, alpha, amplitude, x0, L, collection_time):
+    distanceStep = xArr[1] - xArr[0]
+    Wscint = 2 * Rscint
+    background = 0.02359289617486339 * collection_time
+
+
+    Xscint = np.arange(start=-Rscint + x0,stop=Rscint + x0,step=distanceStep)
+    scintArr = circleConvolve(Rscint, Xscint, x0)
+    scintSlitArr = circleConvolve(Rscint, Xscint, x0)
+    scintSlitArr[0:np.round((Rscint-Wslit/2)/distanceStep).astype(int)] = 0
+    scintSlitArr[np.round((Rscint+Wslit/2)/distanceStep).astype(int):len(scintArr)] = 0
+
+    Xsource = np.arange(start=-Rsource + x0,stop=Rsource + x0,step=distanceStep)
+    sourceArr = sphereConvolve(Rsource, Xsource, x0)
+    sourceArr = sourceArr/sum(sourceArr)
+
+
+
+    XstackedSlit = np.arange(start=-Rscint + x0, stop=Rscint + x0, step=distanceStep)
+    slitArr = singleSlit(XstackedSlit, amplitude, x0, Wslit, L) * (1-alpha)
+    gateArr = singleSlit(XstackedSlit, amplitude, x0, Wscint, L) * alpha
+    slitArr = np.multiply(slitArr, scintSlitArr)
+    gateArr = np.multiply(gateArr, scintArr)
+    slitGateCombined = gateArr + slitArr
+
+    convolvedSignal = np.convolve(slitGateCombined, sourceArr, mode='full')
+    convolvedX = np.arange(start=-len(convolvedSignal)/2, stop=len(convolvedSignal)/2, step=1) * 0.05 + x0
+    convolvedSignal = convolvedSignal + background
+
+    if (len(convolvedSignal) < len(xArr)):
+        convolvedSignal = np.pad(convolvedSignal, np.round((len(xArr) - len(convolvedX))/2).astype(int), mode='constant' ,constant_values=background)
+    elif (len(convolvedSignal) > len(xArr)):
+        convolvedSignal = convolvedSignal[-len(xArr)/2:len(xArr)/2]
+    # May need to do additional checks of inequality (in case of off-by-1 error)
+
+    if (len(convolvedSignal) < len(xArr)):
+        convolvedSignal = np.append(convolvedSignal, convolvedSignal[-1])
+    elif (len(convolvedSignal) > len(xArr)):
+        convolvedSignal = np.delete(convolvedSignal, -1)
+
+
+    return convolvedSignal
+
