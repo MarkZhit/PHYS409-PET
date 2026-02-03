@@ -367,8 +367,7 @@ def sphereConvolve(R,x,x0):
 def doubleSlitModelConvoluted(xArr, Wslit, Rscint, Rsource, alpha, amplitude, x0, L, collection_time):
     distanceStep = xArr[1] - xArr[0]
     Wscint = 2 * Rscint
-    background = 0.02359289617486339 * collection_time
-
+    background = 0.02359289617486339
 
     Xscint = np.arange(start=-Rscint + x0,stop=Rscint + x0,step=distanceStep)
     scintArr = circleConvolve(Rscint, Xscint, x0)
@@ -378,9 +377,7 @@ def doubleSlitModelConvoluted(xArr, Wslit, Rscint, Rsource, alpha, amplitude, x0
 
     Xsource = np.arange(start=-Rsource + x0,stop=Rsource + x0,step=distanceStep)
     sourceArr = sphereConvolve(Rsource, Xsource, x0)
-    sourceArr = sourceArr/sum(sourceArr)
-
-
+    # sourceArr = sourceArr/sum(sourceArr)
 
     XstackedSlit = np.arange(start=-Rscint + x0, stop=Rscint + x0, step=distanceStep)
     slitArr = singleSlit(XstackedSlit, amplitude, x0, Wslit, L) * (1-alpha)
@@ -397,13 +394,43 @@ def doubleSlitModelConvoluted(xArr, Wslit, Rscint, Rsource, alpha, amplitude, x0
         convolvedSignal = np.pad(convolvedSignal, np.round((len(xArr) - len(convolvedX))/2).astype(int), mode='constant' ,constant_values=background)
     elif (len(convolvedSignal) > len(xArr)):
         convolvedSignal = convolvedSignal[-len(xArr)/2:len(xArr)/2]
-    # May need to do additional checks of inequality (in case of off-by-1 error)
 
     if (len(convolvedSignal) < len(xArr)):
         convolvedSignal = np.append(convolvedSignal, convolvedSignal[-1])
     elif (len(convolvedSignal) > len(xArr)):
         convolvedSignal = np.delete(convolvedSignal, -1)
 
+    return convolvedSignal * collection_time
 
-    return convolvedSignal
+def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, ucounts_array, savename):
+    # Find the indices in model_x that are closest to data_x
+    indices = np.searchsorted(Xarr, dist_array)
 
+    # Note: searchsorted usually finds the index to the right.
+    # You may need to clip to avoid index errors at the array boundaries.
+    indices = np.clip(indices, 0, len(Xarr) - 1)
+
+    residual = counts_array - convolvedSignal[indices]
+
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 5))
+
+    ax1.plot(Xarr, convolvedSignal, label="Convolved Model", color='tab:orange')
+    ax1.errorbar(dist_array, counts_array, yerr=ucounts_array, fmt='.',
+                 label="Counts Data", alpha=0.6)
+    ax1.set_title("Model Approximation with Convolution")
+    ax1.set_xlabel("Distance (mm)")
+    ax1.set_ylabel("Counts")
+    ax1.legend()
+
+    ax2.errorbar(dist_array, residual, yerr=ucounts_array, fmt='.',
+                 label="Residual", color='tab:red')
+    ax2.axhline(0, color='black', linestyle='--', alpha=0.5)  # Zero baseline
+    ax2.set_title("Model Residuals")
+    ax2.set_xlabel("Distance (mm)")
+    ax2.set_ylabel("Counts")
+    ax2.legend()
+
+    plt.tight_layout()  # Prevents label overlap
+    plt.savefig("./figures/" + savename)
+    plt.show()
+    return
