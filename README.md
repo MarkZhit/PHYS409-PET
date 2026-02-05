@@ -1,1 +1,0 @@
-This contains code used to analyze scans from the PHYS409 PET lab
