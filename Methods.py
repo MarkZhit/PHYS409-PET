@@ -52,10 +52,12 @@ def group_data_by_metric(directory):
 
 def count_uncertainty(count_arr):
     count_arr_uncertainty = []
-    N = sum(count_arr)
+    # N = sum(count_arr)
     for count in count_arr:
-        p_i = count / N
-        uncertainty = np.sqrt(count * p_i * (1-p_i))
+        # p_i = count / N
+        # uncertainty = np.sqrt(count * p_i * (1-p_i))
+        uncertainty = np.sqrt(count)
+        # TODO: above sqrt uncertainty is for poisson, new from what I had previously
         count_arr_uncertainty.append(uncertainty)
     return count_arr_uncertainty
 
@@ -76,6 +78,7 @@ def count_uncertainty(count_arr):
 #     plt.legend()
 #     plt.savefig("figures/" + savename)
 #     plt.show()
+
 
 def plotWidthScanGaussian(dist, counts, ucounts, width, popt, pcov, savename):
     dist_fit = np.linspace(dist[0], dist[-1], 100)
