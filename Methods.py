@@ -219,13 +219,15 @@ def get_fwhm_Gauss(x, y, yerr):
     return fwhm, ufwhm
 
 def count_uncertainty(count_arr):
-    count_arr_uncertainty = []
-    N = sum(count_arr)
-    for count in count_arr:
-        p_i = count / N
-        uncertainty = np.sqrt(count * p_i * (1-p_i))
-        count_arr_uncertainty.append(uncertainty)
-    return count_arr_uncertainty
+    # count_arr_uncertainty = []
+    # # N = sum(count_arr)
+    # for count in count_arr:
+    #     # p_i = count / N
+    #     # uncertainty = np.sqrt(count * p_i * (1-p_i))
+    #     uncertainty = np.sqrt(count)
+    #     count_arr_uncertainty.append(uncertainty)
+    # return count_arr_uncertainty
+    return np.sqrt(count_arr)
 
 def plotLineScan(dist, counts, ucounts, savename):
     plt.figure()
