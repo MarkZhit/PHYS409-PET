@@ -422,7 +422,7 @@ def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, uc
     ax1.plot(Xarr, convolvedSignal, label="Convolved Model", color='tab:orange')
     ax1.errorbar(dist_array, counts_array, yerr=ucounts_array, fmt='.',
                  label="Counts Data", alpha=0.6)
-    ax1.set_title("Model Approximation with Convolution")
+    # ax1.set_title("Model Approximation with Convolution")
     ax1.set_xlabel("Distance (mm)")
     ax1.set_ylabel("Counts")
     ax1.legend()
@@ -430,7 +430,7 @@ def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, uc
     ax2.errorbar(dist_array, residual, yerr=ucounts_array, fmt='.',
                  label="Residual", color='tab:red')
     ax2.axhline(0, color='black', linestyle='--', alpha=0.5)  # Zero baseline
-    ax2.set_title("Model Residuals")
+    # ax2.set_title("Model Residuals")
     ax2.set_xlabel("Distance (mm)")
     ax2.set_ylabel("Counts")
     ax2.legend()
