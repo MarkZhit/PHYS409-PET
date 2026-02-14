@@ -39,7 +39,7 @@ def group_data_by_metric(directory):
         dist_array = dist_array - midpoint
 
         counts_array = data["Counts"].to_numpy()
-        counts_uncertainty = count_uncertainty(counts_array)
+        counts_uncertainty = count_uncertainty_from_counts(counts_array)
         # -----------------------------------
 
         if width not in grouped_data:
@@ -50,16 +50,21 @@ def group_data_by_metric(directory):
 
     return grouped_data
 
-def count_uncertainty(count_arr):
-    count_arr_uncertainty = []
-    # N = sum(count_arr)
-    for count in count_arr:
-        # p_i = count / N
-        # uncertainty = np.sqrt(count * p_i * (1-p_i))
-        uncertainty = np.sqrt(count)
-        # TODO: above sqrt uncertainty is for poisson, new from what I had previously
-        count_arr_uncertainty.append(uncertainty)
-    return count_arr_uncertainty
+def count_uncertainty_from_counts(count_arr):
+    # count_arr_uncertainty = []
+    # # N = sum(count_arr)
+    # for count in count_arr:
+    #     # p_i = count / N
+    #     # uncertainty = np.sqrt(count * p_i * (1-p_i))
+    #     uncertainty = np.sqrt(count)
+    #     # TODO: above sqrt uncertainty is for poisson, new from what I had previously
+    #     count_arr_uncertainty.append(uncertainty)
+    # return count_arr_uncertainty * 0.5
+
+    return np.sqrt(count_arr)
+
+    # return np.ones_like(count_arr_uncertainty) * np.max(count_arr_uncertainty)
+
 
 # def plotWidthScansGaussian(grouped_data, savename):
 #     plt.figure()
@@ -218,17 +223,6 @@ def get_fwhm_Gauss(x, y, yerr):
 
     return fwhm, ufwhm
 
-def count_uncertainty(count_arr):
-    # count_arr_uncertainty = []
-    # # N = sum(count_arr)
-    # for count in count_arr:
-    #     # p_i = count / N
-    #     # uncertainty = np.sqrt(count * p_i * (1-p_i))
-    #     uncertainty = np.sqrt(count)
-    #     count_arr_uncertainty.append(uncertainty)
-    # return count_arr_uncertainty
-    return np.sqrt(count_arr)
-
 def plotLineScan(dist, counts, ucounts, savename):
     plt.figure()
     plt.title("Sweeped Counts")
@@ -255,7 +249,7 @@ def readLineScan(pathname):
     dist_array = dist_array - midpoint
 
     counts_array = data["Counts"].to_numpy()
-    counts_uncertainty = count_uncertainty(counts_array)
+    counts_uncertainty = count_uncertainty_from_counts(counts_array)
     return (dist_array, counts_array, counts_uncertainty)
 
 
@@ -291,7 +285,7 @@ def readSinogram(directory):
         # print(distances_ref)
 
         angle_to_counts[angle] = data["Counts"].to_numpy()
-        angle_to_ucounts[angle] = count_uncertainty(data["Counts"].to_numpy())
+        angle_to_ucounts[angle] = count_uncertainty_from_counts(data["Counts"].to_numpy())
 
     angles = np.array(sorted(angle_to_counts.keys()))
     # print(angles)
@@ -436,6 +430,6 @@ def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, uc
     ax2.legend()
 
     plt.tight_layout()  # Prevents label overlap
-    plt.savefig("./figures/" + savename)
+    plt.savefig("./figures/" + savename, dpi=600)
     plt.show()
     return
