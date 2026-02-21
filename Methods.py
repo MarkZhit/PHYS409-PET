@@ -417,8 +417,59 @@ def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, uc
     ax1.errorbar(dist_array, counts_array, yerr=ucounts_array, fmt='.',
                  label="Counts Data", alpha=0.6)
     # ax1.set_title("Model Approximation with Convolution")
+
+    if (min(Xarr) < min(dist_array)) :
+        ax1.set_xlim(min(Xarr)*1.1, max(Xarr)*1.1) # maybe need to remove
+    else :
+        ax1.set_xlim(min(dist_array)*1.1, max(dist_array)*1.1) # maybe need to remove
+
+
     ax1.set_xlabel("Distance (mm)", fontsize=14)
     ax1.set_ylabel("Counts", fontsize=14)
+    ax1.text(0.05, 0.95, 'a', transform=ax1.transAxes, fontsize=16,
+               color='black', fontweight='bold', va='top')
+    ax1.legend()
+
+    ax2.errorbar(dist_array, residual, yerr=ucounts_array, fmt='.', color='tab:red')
+    ax2.axhline(0, color='black', linestyle='--', alpha=0.5)  # Zero baseline
+    # ax2.set_title("Model Residuals")
+    ax2.set_xlabel("Distance (mm)", fontsize=14)
+    ax2.set_ylabel("Counts", fontsize=14)
+    ax2.text(0.05, 0.95, 'b', transform=ax2.transAxes, fontsize=16,
+               color='black', fontweight='bold', va='top')
+
+
+    plt.tight_layout()  # Prevents label overlap
+    plt.savefig("./figures/" + savename, dpi=600)
+    plt.show()
+    return
+
+
+def displayModelDataLinescanVert(Xarr, convolvedSignal, dist_array, counts_array, ucounts_array, savename):
+    # Find the indices in model_x that are closest to data_x
+    indices = np.searchsorted(Xarr, dist_array)
+
+    # Note: searchsorted usually finds the index to the right.
+    # You may need to clip to avoid index errors at the array boundaries.
+    indices = np.clip(indices, 0, len(Xarr) - 1)
+
+    residual = counts_array - convolvedSignal[indices]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(6, 7),gridspec_kw={'height_ratios': [2, 1]})
+
+    ax1.plot(Xarr, convolvedSignal, label="Convolved Model", color='tab:orange')
+    ax1.errorbar(dist_array, counts_array, yerr=ucounts_array, fmt='.',
+                 label="Counts Data", alpha=0.6)
+    # ax1.set_title("Model Approximation with Convolution")
+    # ax1.set_xlabel("Distance (mm)", fontsize=14)
+    ax1.set_ylabel("Counts", fontsize=14)
+    # ax1.set_xlim(min(dist_array)*1.2, max(dist_array)*1.2)
+
+    if (min(Xarr) < min(dist_array)) :
+        ax1.set_xlim(min(dist_array)*1.1, max(dist_array)*1.1) # maybe need to remove
+    else :
+        ax1.set_xlim(min(Xarr)*1.1, max(Xarr)*1.1) # maybe need to remove
+
     ax1.text(0.05, 0.95, 'a', transform=ax1.transAxes, fontsize=16,
                color='black', fontweight='bold', va='top')
     ax1.legend()
