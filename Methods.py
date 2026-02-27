@@ -419,9 +419,9 @@ def displayModelDataLinescan(Xarr, convolvedSignal, dist_array, counts_array, uc
     # ax1.set_title("Model Approximation with Convolution")
 
     if (min(Xarr) < min(dist_array)) :
-        ax1.set_xlim(min(Xarr)*1.1, max(Xarr)*1.1) # maybe need to remove
-    else :
         ax1.set_xlim(min(dist_array)*1.1, max(dist_array)*1.1) # maybe need to remove
+    else :
+        ax1.set_xlim(min(Xarr)*1.1, max(Xarr)*1.1) # maybe need to remove
 
 
     ax1.set_xlabel("Distance (mm)", fontsize=14)
@@ -487,3 +487,131 @@ def displayModelDataLinescanVert(Xarr, convolvedSignal, dist_array, counts_array
     plt.savefig("./figures/" + savename, dpi=600)
     plt.show()
     return
+
+
+def get_transmission_efficiency(source_x, slit_width_W, attenuation_len, n_rays=100000, R_scint=35):
+    # --- Constants ---
+    Z_gate_start = 20.0
+    Z_gate_end = 35.0
+    Z_scint = 70
+    X_gate_left = -slit_width_W / 2.0
+    X_gate_right = slit_width_W / 2.0
+    source_x = np.where(((source_x == X_gate_left) | (source_x == X_gate_right)), source_x - 0.00001, source_x)
+
+    np.random.seed(0)
+
+    phi = np.random.uniform(0, 2 * np.pi, n_rays)
+    costheta = np.random.uniform(0, 1, n_rays)
+    sintheta = np.sqrt(1 - costheta ** 2)
+
+    ux = np.sin(phi) * costheta
+    uy = np.sin(phi) * sintheta
+    uz = np.cos(phi)
+    tanphi = np.tan(phi)
+
+    x_at_scint = source_x + Z_scint * tanphi * costheta
+    y_at_scint = Z_scint * tanphi * sintheta
+    x_at_scintMirrored = source_x - Z_scint * tanphi * costheta
+    y_at_scintMirrored = - Z_scint * tanphi * sintheta
+
+    hit_mask = ((x_at_scint ** 2 + y_at_scint ** 2) <= R_scint ** 2) & (
+                (x_at_scintMirrored ** 2 + y_at_scintMirrored ** 2) <= R_scint ** 2)
+
+    ux, uy, uz = ux[hit_mask], uy[hit_mask], uz[hit_mask]
+    if len(uz) == 0: return 0.0
+
+    z_cross_left = (X_gate_left - source_x) * uz / ux
+    z_cross_right = (X_gate_right - source_x) * uz / ux
+    z_gap_1 = np.minimum(z_cross_left, z_cross_right)
+    z_gap_2 = np.maximum(z_cross_left, z_cross_right)
+
+    # visualize_rays(source_x,slit_width_W, ux,uz,z_gap_1, z_gap_2)
+
+    mask_full = (z_gap_2 < 0) | (z_gap_1 > Z_gate_end) | ((z_gap_1 < Z_gate_start) & (z_gap_1 > 0) & (z_gap_2 < 0)) | (
+                (z_gap_1 < Z_gate_start) & (z_gap_2 < Z_gate_start) & (z_gap_1 > 0)) | (z_gap_2 < Z_gate_start) & (
+                            z_gap_1 < 0) & (z_gap_2 > 0)
+    # ^ Entirely through lead (Front-to-Back)
+    mask_side = ((z_gap_1 > Z_gate_start) & (z_gap_1 < Z_gate_end)) | (
+                (z_gap_2 > Z_gate_start) & (z_gap_2 < Z_gate_end))
+    # ^ mask for all rays that enter/exit at least one inside edge of a gate
+    mask_both = (z_gap_1 > Z_gate_start) & (z_gap_2 < Z_gate_end)
+    # ^mask for rays that enter and exit both gates
+
+    air_start = np.maximum(z_gap_1, Z_gate_start)
+    air_end = np.minimum(z_gap_2, Z_gate_end)
+    z_air_thick = np.maximum(0, air_end - air_start)
+
+    d_lead = np.zeros_like(uz)
+    d_lead = np.where(mask_full, (Z_gate_end - Z_gate_start) / np.abs(uz), d_lead)
+    d_lead = np.where(mask_side | mask_both, (Z_gate_end - Z_gate_start - z_air_thick) / np.abs(uz), d_lead)
+
+    weights = np.exp(-d_lead / attenuation_len)
+
+    """Now I calculate the weights for the rays going in the opposite direction"""
+
+    Z_gate_start = -20.0
+    Z_gate_end = -35.0
+
+    z_gap_1_mirrored = np.maximum(z_cross_left, z_cross_right)
+    z_gap_2_mirrored = np.minimum(z_cross_left, z_cross_right)
+
+    mask_full = (z_gap_2_mirrored > 0) | (z_gap_1_mirrored < Z_gate_end) | (
+                (z_gap_1_mirrored > Z_gate_start) & (z_gap_1_mirrored < 0) & (z_gap_2_mirrored > 0)) | (
+                            (z_gap_1_mirrored > Z_gate_start) & (z_gap_2_mirrored > Z_gate_start) & (
+                                z_gap_1_mirrored < 0)) | (z_gap_2_mirrored > Z_gate_start) & (z_gap_1_mirrored > 0) & (
+                            z_gap_2_mirrored < 0)
+    # ^ Entirely through lead (Front-to-Back)
+    mask_side = ((z_gap_1_mirrored < Z_gate_start) & (z_gap_1_mirrored > Z_gate_end)) | (
+                (z_gap_2_mirrored < Z_gate_start) & (z_gap_2_mirrored > Z_gate_end))
+    # ^ mask for all rays that enter/exit at least one inside edge of a gate
+    mask_both = (z_gap_1_mirrored < Z_gate_start) & (z_gap_2_mirrored > Z_gate_end)
+    # ^mask for rays that enter and exit both gates
+
+    air_start = np.maximum(z_gap_1_mirrored, Z_gate_start)
+    air_end = np.minimum(z_gap_2_mirrored, Z_gate_end)
+    z_air_thick = np.maximum(0, air_end - air_start)
+    d_lead = np.zeros_like(uz)
+    d_lead = np.where(mask_full, (Z_gate_start - Z_gate_end) / np.abs(uz), d_lead)
+    d_lead = np.where(mask_side | mask_both, (Z_gate_start - Z_gate_end - z_air_thick) / np.abs(uz), d_lead)
+
+    weights_reversed = np.exp(-d_lead / attenuation_len)
+
+    normalizedWeight = np.sum(weights * weights_reversed) / n_rays
+
+    return normalizedWeight
+
+def monte_carlo_model(source_x_arr, x0, slitW, attenuation_len, A, source_R, exposure_time, background):
+    distanceStep = source_x_arr[1] - source_x_arr[0]
+    A = A * distanceStep
+    # x_scan = source_x_arr[0]
+    transmission = []
+
+    for x in source_x_arr:
+        val = get_transmission_efficiency(x-x0, slit_width_W=slitW, attenuation_len=attenuation_len, n_rays=50000, R_scint=35)
+        transmission.append(val)
+
+    # background = 0.00611 # times exposure time
+
+    Signal_Modelled = A*np.array(transmission) * exposure_time
+
+    Xsource = np.arange(start=-source_R,stop=source_R,step=distanceStep)
+    sourceArr = sphereConvolve(source_R, Xsource, 0)
+
+    convolvedSignal = np.convolve(Signal_Modelled, sourceArr, mode='full')
+    convolvedSignal = convolvedSignal + background * exposure_time #+ background
+
+
+    if (len(convolvedSignal) < len(source_x_arr)):
+        convolvedSignal = np.pad(convolvedSignal, np.round((len(source_x_arr) - len(convolvedSignal))/2).astype(int), mode='constant' ,constant_values=background)
+    elif (len(convolvedSignal) > len(source_x_arr)):
+        convolvedSignal = convolvedSignal[len(convolvedSignal)//2-len(source_x_arr)//2:len(convolvedSignal)//2 + len(source_x_arr)//2]
+    # May need to do additional checks of inequality (in case of off-by-1 error)
+
+    if (len(convolvedSignal) < len(source_x_arr)):
+        convolvedSignal = np.append(convolvedSignal, convolvedSignal[-1])
+    elif (len(convolvedSignal) > len(source_x_arr)):
+        convolvedSignal = np.delete(convolvedSignal, -1)
+
+    return convolvedSignal
+
+
